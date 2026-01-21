@@ -23,12 +23,22 @@ export async function GET() {
 
     // Return settings or defaults
     const settings = user.settings || {
+      // Spike.sh
       spikeWebhookUrl: "",
       spikeEnabled: false,
       spikeAlertOnCritical: true,
       spikeAlertOnHigh: false,
+      // Slack
       slackWebhookUrl: "",
       slackEnabled: false,
+      slackAlertOnCritical: true,
+      slackAlertOnHigh: false,
+      // Email
+      emailAddress: "",
+      emailEnabled: false,
+      emailAlertOnCritical: true,
+      emailAlertOnHigh: false,
+      // General
       emailAlerts: true,
       alertThreshold: "CRITICAL",
     };
@@ -62,12 +72,22 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const {
+      // Spike.sh
       spikeWebhookUrl,
       spikeEnabled,
       spikeAlertOnCritical,
       spikeAlertOnHigh,
+      // Slack
       slackWebhookUrl,
       slackEnabled,
+      slackAlertOnCritical,
+      slackAlertOnHigh,
+      // Email
+      emailAddress,
+      emailEnabled,
+      emailAlertOnCritical,
+      emailAlertOnHigh,
+      // General
       emailAlerts,
       alertThreshold,
     } = body;
@@ -75,23 +95,43 @@ export async function POST(request: Request) {
     const settings = await prisma.userSettings.upsert({
       where: { userId: user.id },
       update: {
+        // Spike.sh
         spikeWebhookUrl: spikeWebhookUrl ?? undefined,
         spikeEnabled: spikeEnabled ?? undefined,
         spikeAlertOnCritical: spikeAlertOnCritical ?? undefined,
         spikeAlertOnHigh: spikeAlertOnHigh ?? undefined,
+        // Slack
         slackWebhookUrl: slackWebhookUrl ?? undefined,
         slackEnabled: slackEnabled ?? undefined,
+        slackAlertOnCritical: slackAlertOnCritical ?? undefined,
+        slackAlertOnHigh: slackAlertOnHigh ?? undefined,
+        // Email
+        emailAddress: emailAddress ?? undefined,
+        emailEnabled: emailEnabled ?? undefined,
+        emailAlertOnCritical: emailAlertOnCritical ?? undefined,
+        emailAlertOnHigh: emailAlertOnHigh ?? undefined,
+        // General
         emailAlerts: emailAlerts ?? undefined,
         alertThreshold: alertThreshold ?? undefined,
       },
       create: {
         userId: user.id,
+        // Spike.sh
         spikeWebhookUrl: spikeWebhookUrl || null,
         spikeEnabled: spikeEnabled || false,
         spikeAlertOnCritical: spikeAlertOnCritical ?? true,
         spikeAlertOnHigh: spikeAlertOnHigh || false,
+        // Slack
         slackWebhookUrl: slackWebhookUrl || null,
         slackEnabled: slackEnabled || false,
+        slackAlertOnCritical: slackAlertOnCritical ?? true,
+        slackAlertOnHigh: slackAlertOnHigh || false,
+        // Email
+        emailAddress: emailAddress || null,
+        emailEnabled: emailEnabled || false,
+        emailAlertOnCritical: emailAlertOnCritical ?? true,
+        emailAlertOnHigh: emailAlertOnHigh || false,
+        // General
         emailAlerts: emailAlerts ?? true,
         alertThreshold: alertThreshold || "CRITICAL",
       },
