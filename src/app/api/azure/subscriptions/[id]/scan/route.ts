@@ -6,6 +6,7 @@ import {
   getAzureClients,
   type AzureCredentials,
 } from "@/lib/azure/credentials";
+import { sendAuditAlerts } from "@/lib/scheduler/scan-executor";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -857,6 +858,15 @@ export async function POST(request: Request, { params }: RouteParams) {
         lastScanAt: new Date(),
         healthScore: 100 - riskScore,
       },
+    });
+
+    // Send alerts for completed scan
+    await sendAuditAlerts(user.id, "AZURE", subscription.name, {
+      critical: totalCritical,
+      high: totalHigh,
+      medium: totalMedium,
+      low: totalLow,
+      total: allFindings.length,
     });
 
     return NextResponse.json({

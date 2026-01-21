@@ -7,6 +7,7 @@ import {
   getGcpClients,
   type GcpCredentials,
 } from "@/lib/gcp/credentials";
+import { sendAuditAlerts } from "@/lib/scheduler/scan-executor";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -867,6 +868,15 @@ export async function POST(request: Request, { params }: RouteParams) {
         lastScanAt: new Date(),
         healthScore: 100 - riskScore,
       },
+    });
+
+    // Send alerts for completed scan
+    await sendAuditAlerts(user.id, "GCP", project.name, {
+      critical: totalCritical,
+      high: totalHigh,
+      medium: totalMedium,
+      low: totalLow,
+      total: allFindings.length,
     });
 
     return NextResponse.json({
