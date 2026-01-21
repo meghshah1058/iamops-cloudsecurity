@@ -84,6 +84,8 @@ DATABASE_URL="postgresql://..."
 NEXTAUTH_SECRET="your-secret"
 NEXTAUTH_URL="http://localhost:3000"
 ANTHROPIC_API_KEY="sk-ant-..."  # For AI assistant
+RESEND_API_KEY="re_..."         # For email alerts (optional)
+RESEND_FROM_EMAIL="security@yourdomain.com"  # Email sender address
 ```
 
 ## Coding Conventions
@@ -127,9 +129,54 @@ export async function GET() {
 }
 ```
 
+## Integrations
+
+### Alert Integrations
+The dashboard supports multiple alert integrations:
+- **Spike.sh**: Incident management webhooks
+- **Slack**: Team notifications via webhooks
+- **Email**: Direct email alerts via Resend
+
+Integration settings are stored in `UserSettings` model and managed at `/dashboard/settings`.
+
+### Scheduled Scans
+Supports automated security scans using node-cron:
+- **Frequency**: Daily, Weekly, Monthly
+- **Configurable**: Hour, day of week, day of month
+- Logs stored in `ScheduledScanLog` model
+
+### GCP Security Checks (20 checks)
+- IAM: Service accounts with Owner role, key rotation
+- Storage: Public buckets, encryption, versioning, uniform access
+- Compute: Default service accounts, public IPs, disk encryption
+- Network: Open firewall rules, VPC flow logs
+- KMS: Key rotation
+- Logging: Audit logs, log sinks
+- Data Services: BigQuery access, Pub/Sub, Secret Manager
+
+### Azure Security Checks (20 checks)
+- Identity: MFA, guest users, conditional access
+- Storage: Public blob access, encryption, secure transfer
+- Compute: Disk encryption, managed identity
+- Network: NSG rules, flow logs, DDoS protection
+- SQL: Firewall rules, TDE, auditing
+- Key Vault: Soft delete, purge protection
+
+## New API Routes
+
+```
+/api/schedules/              # GET/POST schedules
+/api/schedules/[id]/         # GET/DELETE/POST (trigger) schedule
+/api/slack/test/             # POST test Slack webhook
+/api/email/test/             # POST test email
+/api/gcp/projects/[id]/scan/ # POST trigger GCP scan
+/api/azure/subscriptions/[id]/scan/ # POST trigger Azure scan
+```
+
 ## Notes
 
 - Landing page uses smooth scroll for anchor links
 - Sidebar is collapsible with cloud provider sections
 - All dashboard pages support loading skeletons
 - Forms use toast notifications (sonner)
+- Scheduler runs every minute checking for due scans

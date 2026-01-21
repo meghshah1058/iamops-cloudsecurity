@@ -59,18 +59,29 @@ export default function SettingsPage() {
     setMounted(true);
   }, []);
 
-  // Spike.sh integration state
-  const [spikeSettings, setSpikeSettings] = useState({
+  // Integration settings state
+  const [integrationSettings, setIntegrationSettings] = useState({
+    // Spike.sh
     spikeWebhookUrl: "",
     spikeEnabled: false,
     spikeAlertOnCritical: true,
     spikeAlertOnHigh: false,
+    // Slack
     slackWebhookUrl: "",
     slackEnabled: false,
+    slackAlertOnCritical: true,
+    slackAlertOnHigh: false,
+    // Email
+    emailAddress: "",
+    emailEnabled: false,
+    emailAlertOnCritical: true,
+    emailAlertOnHigh: false,
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [testingWebhook, setTestingWebhook] = useState(false);
+  const [testingSlack, setTestingSlack] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -80,13 +91,22 @@ export default function SettingsPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.settings) {
-            setSpikeSettings({
+            setIntegrationSettings({
+              // Spike.sh
               spikeWebhookUrl: data.settings.spikeWebhookUrl || "",
               spikeEnabled: data.settings.spikeEnabled || false,
               spikeAlertOnCritical: data.settings.spikeAlertOnCritical ?? true,
               spikeAlertOnHigh: data.settings.spikeAlertOnHigh || false,
+              // Slack
               slackWebhookUrl: data.settings.slackWebhookUrl || "",
               slackEnabled: data.settings.slackEnabled || false,
+              slackAlertOnCritical: data.settings.slackAlertOnCritical ?? true,
+              slackAlertOnHigh: data.settings.slackAlertOnHigh || false,
+              // Email
+              emailAddress: data.settings.emailAddress || "",
+              emailEnabled: data.settings.emailEnabled || false,
+              emailAlertOnCritical: data.settings.emailAlertOnCritical ?? true,
+              emailAlertOnHigh: data.settings.emailAlertOnHigh || false,
             });
           }
         }
@@ -109,7 +129,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(spikeSettings),
+        body: JSON.stringify(integrationSettings),
       });
 
       if (response.ok) {
@@ -127,7 +147,7 @@ export default function SettingsPage() {
   };
 
   const handleTestWebhook = async () => {
-    if (!spikeSettings.spikeWebhookUrl) {
+    if (!integrationSettings.spikeWebhookUrl) {
       toast.error("Please enter a Spike.sh webhook URL first");
       return;
     }
@@ -137,7 +157,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/spike/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookUrl: spikeSettings.spikeWebhookUrl }),
+        body: JSON.stringify({ webhookUrl: integrationSettings.spikeWebhookUrl }),
       });
 
       if (response.ok) {
@@ -151,6 +171,63 @@ export default function SettingsPage() {
       toast.error("Failed to send test alert");
     } finally {
       setTestingWebhook(false);
+    }
+  };
+
+  const handleTestSlack = async () => {
+    if (!integrationSettings.slackWebhookUrl) {
+      toast.error("Please enter a Slack webhook URL first");
+      return;
+    }
+
+    setTestingSlack(true);
+    try {
+      const response = await fetch("/api/slack/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl: integrationSettings.slackWebhookUrl }),
+      });
+
+      if (response.ok) {
+        toast.success("Test message sent to Slack!");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to send test message");
+      }
+    } catch (error) {
+      console.error("Failed to test Slack:", error);
+      toast.error("Failed to send test message");
+    } finally {
+      setTestingSlack(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    const emailToTest = integrationSettings.emailAddress || session?.user?.email;
+    if (!emailToTest) {
+      toast.error("Please enter an email address first");
+      return;
+    }
+
+    setTestingEmail(true);
+    try {
+      const response = await fetch("/api/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailToTest }),
+      });
+
+      if (response.ok) {
+        toast.success(`Test email sent to ${emailToTest}!`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to send test email");
+      }
+    } catch (error) {
+      console.error("Failed to test email:", error);
+      toast.error("Failed to send test email");
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -363,9 +440,9 @@ export default function SettingsPage() {
                           </p>
                         </div>
                         <Switch
-                          checked={spikeSettings.spikeEnabled}
+                          checked={integrationSettings.spikeEnabled}
                           onCheckedChange={(checked) =>
-                            setSpikeSettings({ ...spikeSettings, spikeEnabled: checked })
+                            setIntegrationSettings({ ...integrationSettings, spikeEnabled: checked })
                           }
                         />
                       </div>
@@ -376,9 +453,9 @@ export default function SettingsPage() {
                           <Input
                             type="url"
                             placeholder="https://api.spike.sh/v1/incidents/webhook/..."
-                            value={spikeSettings.spikeWebhookUrl}
+                            value={integrationSettings.spikeWebhookUrl}
                             onChange={(e) =>
-                              setSpikeSettings({ ...spikeSettings, spikeWebhookUrl: e.target.value })
+                              setIntegrationSettings({ ...integrationSettings, spikeWebhookUrl: e.target.value })
                             }
                             className="bg-white/5 border-white/10 text-white font-mono text-sm"
                           />
@@ -386,7 +463,7 @@ export default function SettingsPage() {
                             variant="outline"
                             className="bg-white/5 border-white/10 gap-2"
                             onClick={handleTestWebhook}
-                            disabled={testingWebhook || !spikeSettings.spikeWebhookUrl}
+                            disabled={testingWebhook || !integrationSettings.spikeWebhookUrl}
                           >
                             {testingWebhook ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -410,9 +487,9 @@ export default function SettingsPage() {
                               <span className="text-white text-sm">Critical Findings</span>
                             </div>
                             <Switch
-                              checked={spikeSettings.spikeAlertOnCritical}
+                              checked={integrationSettings.spikeAlertOnCritical}
                               onCheckedChange={(checked) =>
-                                setSpikeSettings({ ...spikeSettings, spikeAlertOnCritical: checked })
+                                setIntegrationSettings({ ...integrationSettings, spikeAlertOnCritical: checked })
                               }
                             />
                           </div>
@@ -422,9 +499,9 @@ export default function SettingsPage() {
                               <span className="text-white text-sm">High Findings</span>
                             </div>
                             <Switch
-                              checked={spikeSettings.spikeAlertOnHigh}
+                              checked={integrationSettings.spikeAlertOnHigh}
                               onCheckedChange={(checked) =>
-                                setSpikeSettings({ ...spikeSettings, spikeAlertOnHigh: checked })
+                                setIntegrationSettings({ ...integrationSettings, spikeAlertOnHigh: checked })
                               }
                             />
                           </div>
@@ -435,7 +512,7 @@ export default function SettingsPage() {
 
                   <Separator className="bg-white/10" />
 
-                  {/* Slack Integration (placeholder for future) */}
+                  {/* Slack Integration */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -458,24 +535,165 @@ export default function SettingsPage() {
                           </p>
                         </div>
                         <Switch
-                          checked={spikeSettings.slackEnabled}
+                          checked={integrationSettings.slackEnabled}
                           onCheckedChange={(checked) =>
-                            setSpikeSettings({ ...spikeSettings, slackEnabled: checked })
+                            setIntegrationSettings({ ...integrationSettings, slackEnabled: checked })
                           }
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label className="text-white/70">Slack Webhook URL</Label>
-                        <Input
-                          type="url"
-                          placeholder="https://hooks.slack.com/services/..."
-                          value={spikeSettings.slackWebhookUrl}
-                          onChange={(e) =>
-                            setSpikeSettings({ ...spikeSettings, slackWebhookUrl: e.target.value })
+                        <div className="flex gap-2">
+                          <Input
+                            type="url"
+                            placeholder="https://hooks.slack.com/services/..."
+                            value={integrationSettings.slackWebhookUrl}
+                            onChange={(e) =>
+                              setIntegrationSettings({ ...integrationSettings, slackWebhookUrl: e.target.value })
+                            }
+                            className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                          />
+                          <Button
+                            variant="outline"
+                            className="bg-white/5 border-white/10 gap-2"
+                            onClick={handleTestSlack}
+                            disabled={testingSlack || !integrationSettings.slackWebhookUrl}
+                          >
+                            {testingSlack ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                            Test
+                          </Button>
+                        </div>
+                        <p className="text-xs text-white/30">
+                          Create an incoming webhook in your Slack workspace settings
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-white/70">Alert Severity Levels</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500" />
+                              <span className="text-white text-sm">Critical Findings</span>
+                            </div>
+                            <Switch
+                              checked={integrationSettings.slackAlertOnCritical}
+                              onCheckedChange={(checked) =>
+                                setIntegrationSettings({ ...integrationSettings, slackAlertOnCritical: checked })
+                              }
+                            />
+                          </div>
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-orange-500" />
+                              <span className="text-white text-sm">High Findings</span>
+                            </div>
+                            <Switch
+                              checked={integrationSettings.slackAlertOnHigh}
+                              onCheckedChange={(checked) =>
+                                setIntegrationSettings({ ...integrationSettings, slackAlertOnHigh: checked })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-white/10" />
+
+                  {/* Email Integration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                        <Mail className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-medium">Email Alerts</h3>
+                        <p className="text-sm text-white/40">Direct email notifications</p>
+                      </div>
+                    </div>
+
+                    <div className="ml-13 space-y-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div>
+                          <p className="text-white font-medium">Enable Email Alerts</p>
+                          <p className="text-sm text-white/40">
+                            Receive security alerts via email
+                          </p>
+                        </div>
+                        <Switch
+                          checked={integrationSettings.emailEnabled}
+                          onCheckedChange={(checked) =>
+                            setIntegrationSettings({ ...integrationSettings, emailEnabled: checked })
                           }
-                          className="bg-white/5 border-white/10 text-white font-mono text-sm"
                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white/70">Email Address</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            placeholder={session?.user?.email || "you@example.com"}
+                            value={integrationSettings.emailAddress}
+                            onChange={(e) =>
+                              setIntegrationSettings({ ...integrationSettings, emailAddress: e.target.value })
+                            }
+                            className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                          />
+                          <Button
+                            variant="outline"
+                            className="bg-white/5 border-white/10 gap-2"
+                            onClick={handleTestEmail}
+                            disabled={testingEmail}
+                          >
+                            {testingEmail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            Test
+                          </Button>
+                        </div>
+                        <p className="text-xs text-white/30">
+                          Leave empty to use your account email ({session?.user?.email})
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-white/70">Alert Severity Levels</Label>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500" />
+                              <span className="text-white text-sm">Critical Findings</span>
+                            </div>
+                            <Switch
+                              checked={integrationSettings.emailAlertOnCritical}
+                              onCheckedChange={(checked) =>
+                                setIntegrationSettings({ ...integrationSettings, emailAlertOnCritical: checked })
+                              }
+                            />
+                          </div>
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-orange-500" />
+                              <span className="text-white text-sm">High Findings</span>
+                            </div>
+                            <Switch
+                              checked={integrationSettings.emailAlertOnHigh}
+                              onCheckedChange={(checked) =>
+                                setIntegrationSettings({ ...integrationSettings, emailAlertOnHigh: checked })
+                              }
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

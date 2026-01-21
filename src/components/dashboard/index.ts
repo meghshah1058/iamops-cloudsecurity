@@ -20,3 +20,4 @@ export { PhaseSummary } from "./phase-summary";
 export { SecurityScore } from "./security-score";
 export { QuickActions } from "./quick-actions";
 export { FindingsTable } from "./findings-table";
+export { ScheduleConfig } from "./schedule-config";

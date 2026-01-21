@@ -84,6 +84,14 @@ model AwsAccount {
   lastScanAt      DateTime?
   healthScore     Float?
 
+  // Schedule settings
+  scheduleEnabled     Boolean   @default(false)
+  scheduleFrequency   String?   // "daily" | "weekly" | "monthly"
+  scheduleHour        Int?      // 0-23
+  scheduleDayOfWeek   Int?      // 0-6 for weekly
+  scheduleDayOfMonth  Int?      // 1-31 for monthly
+  nextScheduledScan   DateTime?
+
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   audits          AwsAudit[]
@@ -177,6 +185,14 @@ model GcpProject {
   isActive          Boolean   @default(true)
   lastScanAt        DateTime?
   healthScore       Float?
+
+  // Schedule settings
+  scheduleEnabled     Boolean   @default(false)
+  scheduleFrequency   String?   // "daily" | "weekly" | "monthly"
+  scheduleHour        Int?      // 0-23
+  scheduleDayOfWeek   Int?      // 0-6 for weekly
+  scheduleDayOfMonth  Int?      // 1-31 for monthly
+  nextScheduledScan   DateTime?
 
   userId            String
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -273,6 +289,14 @@ model AzureSubscription {
   lastScanAt      DateTime?
   healthScore     Float?
 
+  // Schedule settings
+  scheduleEnabled     Boolean   @default(false)
+  scheduleFrequency   String?   // "daily" | "weekly" | "monthly"
+  scheduleHour        Int?      // 0-23
+  scheduleDayOfWeek   Int?      // 0-6 for weekly
+  scheduleDayOfMonth  Int?      // 1-31 for monthly
+  nextScheduledScan   DateTime?
+
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   audits          AzureAudit[]
@@ -365,11 +389,19 @@ model UserSettings {
   spikeAlertOnCritical  Boolean   @default(true)
   spikeAlertOnHigh      Boolean   @default(false)
 
-  // Other integrations can be added here
+  // Slack Integration
   slackWebhookUrl       String?
   slackEnabled          Boolean   @default(false)
+  slackAlertOnCritical  Boolean   @default(true)
+  slackAlertOnHigh      Boolean   @default(false)
 
-  // Notification preferences
+  // Email Integration (via Resend)
+  emailAddress          String?   // Override user email
+  emailEnabled          Boolean   @default(false)
+  emailAlertOnCritical  Boolean   @default(true)
+  emailAlertOnHigh      Boolean   @default(false)
+
+  // General notification preferences
   emailAlerts           Boolean   @default(true)
   alertThreshold        String    @default("CRITICAL") // CRITICAL, HIGH, MEDIUM, LOW
 
@@ -403,4 +435,21 @@ model AuditPhaseTemplate {
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model ScheduledScanLog {
+  id            String    @id @default(cuid())
+  cloudProvider String    // "AWS" | "GCP" | "AZURE"
+  accountId     String    // Reference ID to the account/project/subscription
+  userId        String    // User who owns this schedule
+  status        String    // "success" | "failed" | "skipped" | "running"
+  auditId       String?   // Reference to the created audit (if successful)
+  errorMessage  String?   @db.Text
+  scheduledFor  DateTime
+  executedAt    DateTime  @default(now())
+  duration      Int?      // Duration in milliseconds
+
+  @@index([cloudProvider, accountId])
+  @@index([userId])
+  @@index([status])
 }
